@@ -29,9 +29,9 @@ sub evt_click{
 sub draw_grid{
     my ( $self, $rows, $cols, $cells ) = @_;
 
-    $self->SetRowLabelValue( $_, _utf2cp949($rows->[$_]) ) foreach ( 0 .. $#{$rows} );
-    $self->SetColLabelValue( $_, _utf2cp949($cols->[$_]) ) foreach ( 0 .. $#{$cols} );
-    $self->SetCellValue( $_ / @{$cols}, $_ % @{$cols}, _utf2cp949($cells->[$_]) ) foreach ( 0 .. $#{$cells} );
+    $self->SetRowLabelValue( $_, _utf2cp949($rows->[$_]) ) foreach 0 .. $#{$rows};
+    $self->SetColLabelValue( $_, _utf2cp949($cols->[$_]) ) foreach 0 .. $#{$cols};
+    $self->SetCellValue( $_ / @{$cols}, $_ % @{$cols}, _utf2cp949($cells->[$_]) ) foreach 0 .. $#{$cells};
 }
 
 sub _utf2cp949 { encode('cp949', decode('utf8', shift )) } 

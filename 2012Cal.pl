@@ -19,3 +19,5 @@ $grid->evt_click($ship->sort_grid);
 
 $frame->Show;
 $app->MainLoop;
+
+

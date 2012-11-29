@@ -63,20 +63,18 @@ sub _init{
     my $self = shift;
 
     $self->{'attrorder'} = ["함선 종류", "모험 레벨", "교역 레벨", "전투 레벨"];
-    my @ship_kind = qw/탐험용 상업용 전투용 ※캐쉬/;
+    my %ship_kind = ( "탐험용" => 1, "상업용" => 2, "전투용" => 3, "※캐쉬" => 9 );
     my %ship_html;
+    my $browser = LWP::UserAgent->new;
+    my $tree;
 
-    foreach (0 .. $#ship_kind){
-	my $browser = LWP::UserAgent->new;
-	my $tree = HTML::TreeBuilder->new;
-	my $num = $_ + 1;
-
-	$num = 9 if ($_ == 3);
-	$ship_html{$ship_kind[$_]} = 
-	    $tree->parse($browser->get("http://uwodbmirror.ivyro.net/kr/main.php?id=145&chp=" . $num)->content);
+    foreach (keys %ship_kind){
+	$tree = HTML::TreeBuilder->new;
+	$ship_html{$_} = 
+	    $tree->parse($browser->get("http://uwodbmirror.ivyro.net/kr/main.php?id=145&chp=" . $ship_kind{$_})->content);
     }
 
-    foreach my $ship_kind (@ship_kind){
+    foreach my $ship_kind (keys %ship_kind){
 	my $ship_name;
 	foreach ($ship_html{$ship_kind}->look_down(
 		     sub { $_[0]->attr('href') =~ /main\.php\?id=5\d{7}/ or $_[0]->attr('class') =~ /level\d/ }
@@ -114,6 +112,10 @@ sub grid_list{
 }    
 
 wxGrid 쪽에서 마우스 이벤트가 발생했을때 grid_list로 다시 재정렬해서 grid에 그려주기 위한 서브루틴입니다.
+자세히 보시면 익명함수를 두단계에 걸쳐서 반환하게 되는데 wxGrid모듈안의 마우스 클릭 이벤트가 인자로 가져야 할
+익명함수를 반환하고 그 내부에서의 처리를 위해 또 다시 익명함수를 반환하게되는 형태의 클로져입니다.
+여기서 눈여겨 보아야 할 점은 제일 안쪽의 익명 함수의 첫번째와 두번째 인자가 wxGrid객체와 Event객체를 받게되어 이벤트를 처리하게 된다는 점입니다.
+
 sub sort_grid{
     my $self = shift;
 
@@ -153,7 +155,7 @@ sub _sort{
 
 [wxGrid.pm - GUI폼에 그리드를 그려주기 위한 모듈 작성]
 
-일단 'Wx::Grid'로부터 상속받은 클래스 입니다. $class->SUPER::new()를 이용해서 객체를 생성하게 되는데 여기서 중요한 점은 Grid객체 생성자는 첫번째 인자로 Frame 객체를 받는다는 것입니다. 여기서는 main.pl에서 작성한 frame으로부터 넘겨받게 됩니다.
+일단 'Wx::Grid'로부터 상속받은 클래스 입니다. $class->SUPER::new()를 이용해서 객체를 생성하게 되는데 중요한 점은 Grid객체 생성자는 첫번째 인자로 Frame 객체를 받는다는 것입니다. 여기서는 main.pl에서 작성한 frame으로부터 넘겨받게 됩니다.
 package wxGrid;
 
 use base 'Wx::Grid';
@@ -177,21 +179,23 @@ sub _init{
 }
 
 함선정보를 모두 담고 있는 행, 열, 셀에 대한 배열로 그리드를 그려주게 됩니다.
-여기서 눈여겨 봐야할 점은 utf2cp949()의 존재입니다. 코드문서 자체가 cp949 인코딩 형식이라면
+눈여겨 봐야할 점은 utf2cp949()의 존재입니다. 코드문서 자체가 cp949 인코딩 형식이라면
 두부쪽에서 데이타를 긁어오는 시점에서 인코딩을 해주셔야 합니다. 문서자체가 utf8이신 분들은
 저처럼 그대로 해주시면 되겠습니다.
 sub draw_grid{
     my ( $self, $rows, $cols, $cells ) = @_;
 
-    $self->SetRowLabelValue( $_, _utf2cp949($rows->[$_]) ) foreach ( 0 .. $#{$rows} );
-    $self->SetColLabelValue( $_, _utf2cp949($cols->[$_]) ) foreach ( 0 .. $#{$cols} );
-    $self->SetCellValue( $_ / @{$cols}, $_ % @{$cols}, _utf2cp949($cells->[$_]) ) foreach ( 0 .. $#{$cells} );
+    $self->SetRowLabelValue( $_, _utf2cp949($rows->[$_]) ) foreach 0 .. $#{$rows};
+    $self->SetColLabelValue( $_, _utf2cp949($cols->[$_]) ) foreach 0 .. $#{$cols};
+    $self->SetCellValue( $_ / @{$cols}, $_ % @{$cols}, _utf2cp949($cells->[$_]) ) foreach 0 .. $#{$cells};
 }
 
 sub _utf2cp949 { encode('cp949', decode('utf8', shift )) } 
 
-그리드 상단의 라벨에 마우스 클릭 이벤트가 발생했을 경우 $func에 담겨있는 함수를 실행하게 됩니다.
-여기서는 열심히 정렬기능을 수행하겠죠?
+그리드 상단의 라벨에 마우스 클릭 이벤트가 발생했을 경우 실행하게될 이벤트를 보유한 함수입니다.
+앞쪽에서 미리 얘기했던 익명함수를 중첩반환하는 sort_grid를 $func가 받아서 이벤트 함수에 인자로
+넘겨주는 형태입니다.
+
 sub evt_click{
     my ($self, $func) = @_;
 

@@ -15,20 +15,18 @@ sub _init{
     my $self = shift;
 
     $self->{'attrorder'} = ["함선 종류", "모험 레벨", "교역 레벨", "전투 레벨"];
-    my @ship_kind = qw/탐험용 상업용 전투용 ※캐쉬/;
+    my %ship_kind = ( "탐험용" => 1, "상업용" => 2, "전투용" => 3, "※캐쉬" => 9 );
     my %ship_html;
+    my $browser = LWP::UserAgent->new;
+    my $tree;
 
-    foreach (0 .. $#ship_kind){
-	my $browser = LWP::UserAgent->new;
-	my $tree = HTML::TreeBuilder->new;
-	my $num = $_ + 1;
-
-	$num = 9 if ($_ == 3);
-	$ship_html{$ship_kind[$_]} = 
-	    $tree->parse($browser->get("http://uwodbmirror.ivyro.net/kr/main.php?id=145&chp=" . $num)->content);
+    foreach (keys %ship_kind){
+	$tree = HTML::TreeBuilder->new;
+	$ship_html{$_} =
+	    $tree->parse($browser->get("http://uwodbmirror.ivyro.net/kr/main.php?id=145&chp=" . $ship_kind{$_})->content);
     }
 
-    foreach my $ship_kind (@ship_kind){
+    foreach my $ship_kind (keys %ship_kind){
 	my $ship_name;
 	foreach ($ship_html{$ship_kind}->look_down(
 		     sub { $_[0]->attr('href') =~ /main\.php\?id=5\d{7}/ or $_[0]->attr('class') =~ /level\d/ }
@@ -39,6 +37,7 @@ sub _init{
 	    } else {
 		$self->{'ship'}{$ship_name}{$_->attr_get_i('title')} = $_->as_text;
 	    }
+
 	}
     }
 }
