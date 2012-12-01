@@ -2,7 +2,8 @@ package Ship;
 
 use LWP::UserAgent;
 use HTML::TreeBuilder;
-use Data::Dumper;
+use Encode qw/decode/;
+use utf8;
 
 sub new{
     my $class = shift;
@@ -17,13 +18,15 @@ sub _init{
     $self->{'attrorder'} = ["함선 종류", "모험 레벨", "교역 레벨", "전투 레벨"];
     my %ship_kind = ( "탐험용" => 1, "상업용" => 2, "전투용" => 3, "※캐쉬" => 9 );
     my %ship_html;
-    my $browser = LWP::UserAgent->new;
-    my $tree;
+    my $ua = LWP::UserAgent->new;
 
+    my ($rsp, $html, $tree);
     foreach (keys %ship_kind){
+	$rsp = $ua->get("http://uwodbmirror.ivyro.net/kr/main.php?id=145&chp=" . $ship_kind{$_});
+	$html = decode('utf8', $rsp->content);
+
 	$tree = HTML::TreeBuilder->new;
-	$ship_html{$_} =
-	    $tree->parse($browser->get("http://uwodbmirror.ivyro.net/kr/main.php?id=145&chp=" . $ship_kind{$_})->content);
+	$ship_html{$_} = $tree->parse($html);
     }
 
     foreach my $ship_kind (keys %ship_kind){

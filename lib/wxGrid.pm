@@ -1,8 +1,8 @@
 package wxGrid;
 
 use base 'Wx::Grid';
-use Encode qw/encode decode/;
 use Wx::Event qw/EVT_GRID_LABEL_LEFT_CLICK EVT_GRID_LABEL_RIGHT_CLICK/;;
+use wxPerl::Styles 'wxVal';
 
 sub new{
     my ($class, $frame, @arg_list)  = @_;
@@ -17,6 +17,8 @@ sub _init{
     $self->CreateGrid( scalar @{$rows}, scalar @{$cols} );
     $self->draw_grid( $rows, $cols, $cells );
     $self->SetRowLabelSize(150);
+    $self->AutoSizeColumns(1);
+    $self->SetDefaultCellAlignment(wxVal('align_right'), wxVal('align_centre'));
 }
 
 sub evt_click{
@@ -29,11 +31,9 @@ sub evt_click{
 sub draw_grid{
     my ( $self, $rows, $cols, $cells ) = @_;
 
-    $self->SetRowLabelValue( $_, _utf2cp949($rows->[$_]) ) foreach 0 .. $#{$rows};
-    $self->SetColLabelValue( $_, _utf2cp949($cols->[$_]) ) foreach 0 .. $#{$cols};
-    $self->SetCellValue( $_ / @{$cols}, $_ % @{$cols}, _utf2cp949($cells->[$_]) ) foreach 0 .. $#{$cells};
+    $self->SetRowLabelValue( $_, $rows->[$_] ) foreach 0 .. $#{$rows};
+    $self->SetColLabelValue( $_, $cols->[$_] ) foreach 0 .. $#{$cols};
+    $self->SetCellValue( $_ / @{$cols}, $_ % @{$cols}, $cells->[$_] ) foreach 0 .. $#{$cells};
 }
-
-sub _utf2cp949 { encode('cp949', decode('utf8', shift )) } 
 
 1;
